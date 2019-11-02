@@ -4,7 +4,7 @@ import akka.actor.ActorSystem
 import akka.stream.ActorMaterializer
 import akka.stream.alpakka.slick.javadsl.SlickSession
 import akka.stream.alpakka.slick.scaladsl.Slick
-import akka.stream.scaladsl.{Sink, Source}
+import akka.stream.scaladsl.Sink
 import slick.basic.DatabaseConfig
 import slick.jdbc.{GetResult, JdbcProfile}
 
@@ -24,8 +24,22 @@ object SlickApp extends App {
       """.as[User](User.result))
     .runWith(Sink.foreach { user => system.log.info(s"$user") })
 
-  /*Source.single(User(name = "username10"))
-    .runWith(Slick.sink(user => sqlu"INSERT INTO users(name) VALUES (${user.name})"))*/
+  Slick.source[Role](
+    sql"""
+      SELECT *
+      FROM roles
+      WHERE name = '#${Role.`USER_ROLE`}'
+       """.as[Role](Role.result))
+    .log("role")
+    .map { role => User(name = "username10", role = Option(role)) }
+    .runWith(Slick.sink(user => user.role match {
+      case Some(value) =>
+        sqlu"""
+              INSERT INTO users(name, role_id)
+              VALUES ('#${user.name}', '#${value.id}')
+          """
+      case _ => throw new RuntimeException()
+    }))
 
   system.registerOnTermination { () => session.close() }
 }
@@ -42,6 +56,8 @@ object User {
 case class Role(id: Int, name: String)
 
 object Role {
+
+  val `USER_ROLE` = "USER_ROLE"
 
   def result = GetResult(result => Role(result.nextInt(), result.nextString()))
 }
