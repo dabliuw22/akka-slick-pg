@@ -1,6 +1,13 @@
-CREATE TABLE users (
+CREATE TABLE roles (
     id SERIAL PRIMARY KEY,
     name VARCHAR NOT NULL
+);
+
+CREATE TABLE users (
+    id SERIAL PRIMARY KEY,
+    name VARCHAR NOT NULL,
+    role_id INTEGER NOT NULL,
+    FOREIGN KEY (role_id) REFERENCES roles(id)
 );
 
 CREATE TABLE items (
@@ -8,14 +15,17 @@ CREATE TABLE items (
     name VARCHAR NOT NULL
 );
 
-INSERT INTO users(name) VALUES('username1');
-INSERT INTO users(name) VALUES('username2');
-INSERT INTO users(name) VALUES('username3');
-INSERT INTO users(name) VALUES('username4');
-INSERT INTO users(name) VALUES('username5');
-INSERT INTO users(name) VALUES('username6');
-INSERT INTO users(name) VALUES('username7');
-INSERT INTO users(name) VALUES('username8');
+INSERT INTO roles(name) VALUES('USER_ROLE');
+INSERT INTO roles(name) VALUES('ADMIN_ROLE');
+
+INSERT INTO users(name, role_id) VALUES('username1', 1);
+INSERT INTO users(name, role_id) VALUES('username2', 1);
+INSERT INTO users(name, role_id) VALUES('username3', 1);
+INSERT INTO users(name, role_id) VALUES('username4', 1);
+INSERT INTO users(name, role_id) VALUES('username5', 1);
+INSERT INTO users(name, role_id) VALUES('username6', 1);
+INSERT INTO users(name, role_id) VALUES('username7', 1);
+INSERT INTO users(name, role_id) VALUES('username8', 2);
 
 INSERT INTO items(name) VALUES('items1');
 INSERT INTO items(name) VALUES('items2');
