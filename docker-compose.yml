@@ -1,0 +1,13 @@
+version: "3"
+services:
+  db:
+    image: "postgres"
+    container_name: "my_slick_postgres"
+    environment:
+      - POSTGRES_USER=slick
+      - POSTGRES_PASSWORD=slick
+      - POSTGRES_DB=slick_db
+    ports:
+      - "5432:5432"
+    volumes:
+      - ./init.sql:/docker-entrypoint-initdb.d/init.sql
