@@ -6,7 +6,7 @@ CREATE TABLE roles (
 CREATE TABLE users (
     id SERIAL PRIMARY KEY,
     name VARCHAR NOT NULL,
-    role_id INTEGER NOT NULL,
+    role_id INTEGER NULL,
     FOREIGN KEY (role_id) REFERENCES roles(id)
 );
 
