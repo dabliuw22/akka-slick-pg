@@ -73,7 +73,13 @@ case class RolesRepository(tables: Tables)(implicit session: SlickSession) {
       .update(updateRole.toTable)))
 }
 
-case class User(id: Int = 0, name: String, role: Option[Role] = None)
+case class User(id: Int = 0, name: String, role: Option[Role] = None) {
+
+  def toTable = role match {
+    case Some(value) => (this.id, this.name, value.id)
+    case _ => (this.id, this.name, None)
+  }
+}
 
 object User {
 
