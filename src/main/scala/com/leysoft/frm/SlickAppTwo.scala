@@ -1,4 +1,4 @@
-package com.leysoft.orm
+package com.leysoft.frm
 
 import akka.actor.ActorSystem
 import akka.stream.ActorMaterializer
@@ -19,7 +19,8 @@ object SlickAppTwo extends App {
   val rolesRepository = RolesRepository(tables)
   val userRepository = UserRepository(tables)
 
-  userRepository.save(User(name = "user67", role = Some(Role(Option(1), "USER_ROLE"))))
+  rolesRepository.findByName("USER_ROLE")
+    .flatMapConcat { role =>  userRepository.save(User(name = "username100", role = Option(role))) }
     .runWith(Sink.foreach { count => system.log.info(s"save: $count") })
 
   rolesRepository.save(Role(name = "DBA_ROLE"))
@@ -33,6 +34,13 @@ object SlickAppTwo extends App {
 
   userRepository.findAll
     .runWith(Sink.foreach { role => system.log.info(s"findAll: $role") })
+
+  /*
+  rolesRepository.delete(Role(Some(3), "DBA_ROLE"))
+    .runWith(Sink.foreach { count => system.log.info(s"delete: $count") })
+
+  userRepository.deleteById(5)
+    .runWith(Sink.foreach { count => system.log.info(s"delete: $count") })*/
 }
 
 case class UserRepository(tables: Tables)(implicit session: SlickSession) {
@@ -40,7 +48,7 @@ case class UserRepository(tables: Tables)(implicit session: SlickSession) {
   import tables._
 
   def save(user: User) = Source
-    .single(user.toTable)
+    .single(user.tupled)
     .via(Slick.flow(users += _))
 
   def findAll = Slick
@@ -54,6 +62,24 @@ case class UserRepository(tables: Tables)(implicit session: SlickSession) {
   def findByName(name: String) = Slick
     .source((users joinLeft roles on (_.roleId === _.id))
       .filter { _._1.name === name }.result)
+
+  def delete(user: User) = Source
+    .single(user)
+    .via(Slick.flow(deleteUser => users
+      .filter { _.id === deleteUser.id }
+      .delete))
+
+  def deleteById(id: Int) = Source
+    .single(id)
+    .via(Slick.flow(deleteId => users
+      .filter { _.id === deleteId }
+      .delete))
+
+  def update(user: User) = Source
+    .single(user)
+    .via(Slick.flow(updateUser => users
+      .filter { _.id === updateUser.id }
+      .update(updateUser.tupled)))
 }
 
 case class RolesRepository(tables: Tables)(implicit session: SlickSession) {
@@ -61,7 +87,7 @@ case class RolesRepository(tables: Tables)(implicit session: SlickSession) {
   import tables._
 
   def save(role: Role) = Source
-    .single(role.toTable)
+    .single(role.tupled)
     .via(Slick.flow(roles += _))
 
   def findAll = Slick
@@ -78,18 +104,26 @@ case class RolesRepository(tables: Tables)(implicit session: SlickSession) {
 
   def delete(role: Role) = Source
     .single(role)
-    .via(Slick.flow(deleteRole => roles.filter { _.id === deleteRole.id }.delete))
+    .via(Slick.flow(deleteRole => roles
+      .filter { _.id === deleteRole.id }
+      .delete))
+
+  def deleteById(id: Int) = Source
+    .single(id)
+    .via(Slick.flow(deleteId => roles
+      .filter { _.id === deleteId }
+      .delete))
 
   def update(role: Role) = Source
     .single(role)
     .via(Slick.flow(updateRole => roles
       .filter { _.id === updateRole.id }
-      .update(updateRole.toTable)))
+      .update(updateRole.tupled)))
 }
 
-case class User(id: Option[Int] = None, name: String, role: Option[Role] = None) {
+case class User(id: Option[Int] = None, name: String, var role: Option[Role] = None) {
 
-  def toTable = role match {
+  def tupled = role match {
     case Some(value) => (this.id, this.name, value.id)
     case _ => (this.id, this.name, None)
   }
@@ -105,7 +139,7 @@ object User {
 
 case class Role(id: Option[Int] = None, name: String) {
 
-  def toTable = (this.id, this.name)
+  def tupled = (this.id, this.name)
 }
 
 object Role {
@@ -131,8 +165,8 @@ case class Tables(session: SlickSession) {
   class UserTable(tag: Tag) extends Table[UserType](tag, "users") {
     def id = column[Int]("id", O.PrimaryKey, O.AutoInc)
     def name = column[String]("name")
-    def roleId = column[Option[Int]]("role_id")
-    def * = (id.?, name, roleId)
+    def roleId = column[Int]("role_id")
+    def * = (id.?, name, roleId.?)
     def role = foreignKey("role_id",
       roleId, roles)(_.id, onDelete = ForeignKeyAction.Cascade, onUpdate = ForeignKeyAction.Restrict)
   }
