@@ -20,7 +20,7 @@ object SlickAppTwo extends App {
   val userRepository = UserRepository(tables)
 
   rolesRepository.findByName("USER_ROLE")
-    .flatMapConcat { role =>  userRepository.save(User(name = "username100", role = Option(role))) }
+    .flatMapConcat { role =>  userRepository.save(User(name = "username100", role = role.?)) }
     .runWith(Sink.foreach { count => system.log.info(s"save: $count") })
 
   rolesRepository.save(Role(name = "DBA_ROLE"))
@@ -131,15 +131,18 @@ case class User(id: Option[Int] = None, name: String, var role: Option[Role] = N
 
 object User {
 
-  def from(result: ((Option[Int], String, Option[Int]), Option[(Option[Int], String)])) = result._2 match {
-    case Some(value) => User(id = result._1._1, name = result._1._2, role = Option(Role.from(value)))
-    case _ => User(id = result._1._1, name = result._1._2)
-  }
+  def from(result: ((Option[Int], String, Option[Int]), Option[(Option[Int], String)])) =
+    result._2 match {
+      case Some(value) => User(id = result._1._1, name = result._1._2, role = Option(Role.from(value)))
+      case _ => User(id = result._1._1, name = result._1._2)
+    }
 }
 
 case class Role(id: Option[Int] = None, name: String) {
 
   def tupled = (this.id, this.name)
+
+  def ? = Option(this)
 }
 
 object Role {
