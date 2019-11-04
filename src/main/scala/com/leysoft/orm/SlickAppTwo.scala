@@ -19,8 +19,10 @@ object SlickAppTwo extends App {
   val rolesRepository = RolesRepository(tables)
   val userRepository = UserRepository(tables)
 
+  userRepository.save(User(name = "user67", role = Some(Role(Option(1), "USER_ROLE"))))
+    .runWith(Sink.foreach { count => system.log.info(s"save: $count") })
 
-  rolesRepository.save(Role(3, "DBA_ROLE"))
+  rolesRepository.save(Role(name = "DBA_ROLE"))
     .runWith(Sink.foreach { count => system.log.info(s"save: $count") })
 
   rolesRepository.findAll
@@ -37,9 +39,21 @@ case class UserRepository(tables: Tables)(implicit session: SlickSession) {
   import session.profile.api._
   import tables._
 
+  def save(user: User) = Source
+    .single(user.toTable)
+    .via(Slick.flow(users += _))
+
   def findAll = Slick
     .source((users joinLeft roles on (_.roleId === _.id)).result)
     .map { User.from(_) }
+
+  def findById(id: Int) = Slick
+    .source((users joinLeft roles on (_.roleId === _.id))
+      .filter { _._1.id === id }.result)
+
+  def findByName(name: String) = Slick
+    .source((users joinLeft roles on (_.roleId === _.id))
+      .filter { _._1.name === name }.result)
 }
 
 case class RolesRepository(tables: Tables)(implicit session: SlickSession) {
@@ -73,7 +87,7 @@ case class RolesRepository(tables: Tables)(implicit session: SlickSession) {
       .update(updateRole.toTable)))
 }
 
-case class User(id: Int = 0, name: String, role: Option[Role] = None) {
+case class User(id: Option[Int] = None, name: String, role: Option[Role] = None) {
 
   def toTable = role match {
     case Some(value) => (this.id, this.name, value.id)
@@ -83,20 +97,20 @@ case class User(id: Int = 0, name: String, role: Option[Role] = None) {
 
 object User {
 
-  def from(result: ((Int, String, Option[Int]), Option[(Int, String)])) = result._2 match {
+  def from(result: ((Option[Int], String, Option[Int]), Option[(Option[Int], String)])) = result._2 match {
     case Some(value) => User(id = result._1._1, name = result._1._2, role = Option(Role.from(value)))
     case _ => User(id = result._1._1, name = result._1._2)
   }
 }
 
-case class Role(id: Int, name: String) {
+case class Role(id: Option[Int] = None, name: String) {
 
   def toTable = (this.id, this.name)
 }
 
 object Role {
 
-  def from(result: (Int, String)) = Role(result._1, result._2)
+  def from(result: (Option[Int], String)) = Role(result._1, result._2)
 }
 
 case class Tables(session: SlickSession) {
@@ -105,21 +119,21 @@ case class Tables(session: SlickSession) {
   val roles = TableQuery[RoleTable]
   val users = TableQuery[UserTable]
 
-  type RoleType = (Int, String)
-  type UserType = (Int, String, Option[Int])
+  type RoleType = (Option[Int], String)
+  type UserType = (Option[Int], String, Option[Int])
 
   class RoleTable(tag: Tag) extends Table[RoleType](tag, "roles") {
-    def id = column[Int]("id")
+    def id = column[Int]("id", O.PrimaryKey, O.AutoInc)
     def name = column[String]("name")
-    def * = (id, name)
+    def * = (id.?, name)
   }
 
   class UserTable(tag: Tag) extends Table[UserType](tag, "users") {
-    def id = column[Int]("id")
+    def id = column[Int]("id", O.PrimaryKey, O.AutoInc)
     def name = column[String]("name")
     def roleId = column[Option[Int]]("role_id")
-    def * = (id, name, roleId)
+    def * = (id.?, name, roleId)
     def role = foreignKey("role_id",
-      roleId, roles)(_.id, onDelete=ForeignKeyAction.Cascade, onUpdate = ForeignKeyAction.Restrict)
+      roleId, roles)(_.id, onDelete = ForeignKeyAction.Cascade, onUpdate = ForeignKeyAction.Restrict)
   }
 }
