@@ -22,10 +22,10 @@ object SlickAppTwo extends App {
 
   Source.single(User(name = "username100"))
     .flatMapConcat { user => rolesRepository.findByName("ADMIN_ROLE")
-      .map { role => user.role = role.?; user}
+      .map { role => user.role = role ?; user }
       .flatMapConcat { userRepository.save(_) }
       .orElse { userRepository.save(user) }
-    }.runWith (Sink.foreach { count => system.log.info(s"userRepository:save: $count") })
+    }.runWith(Sink.foreach { count => system.log.info(s"userRepository:save: $count") })
 
   /*
   rolesRepository.save(Role(name = "DBA_ROLE"))
