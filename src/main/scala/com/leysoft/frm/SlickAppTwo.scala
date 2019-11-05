@@ -7,6 +7,7 @@ import akka.stream.alpakka.slick.scaladsl.Slick
 import akka.stream.scaladsl.{Sink, Source}
 import slick.basic.DatabaseConfig
 import slick.jdbc.JdbcProfile
+import scala.language.postfixOps
 
 object SlickAppTwo extends App {
   implicit val system = ActorSystem("slick-pg")
@@ -19,22 +20,25 @@ object SlickAppTwo extends App {
   val rolesRepository = RolesRepository(tables)
   val userRepository = UserRepository(tables)
 
-  rolesRepository.findByName("USER_ROLE")
-    .flatMapConcat { role =>  userRepository.save(User(name = "username100", role = role.?)) }
-    .runWith(Sink.foreach { count => system.log.info(s"save: $count") })
+  Source.single(User(name = "username100"))
+    .flatMapConcat { user => rolesRepository.findByName("ADMIN_ROLE")
+      .map { role => user.role = role.?; user}
+      .flatMapConcat { userRepository.save(_) }
+      .orElse { userRepository.save(user) }
+    }.runWith (Sink.foreach { count => system.log.info(s"userRepository:save: $count") })
 
+  /*
   rolesRepository.save(Role(name = "DBA_ROLE"))
-    .runWith(Sink.foreach { count => system.log.info(s"save: $count") })
+    .runWith(Sink.foreach { count => system.log.info(s"save: $count") })*/
 
   rolesRepository.findAll
-    .runWith(Sink.foreach { role => system.log.info(s"findAll: $role") })
+    .runWith(Sink.foreach { role => system.log.info(s"rolesRepository:findAll: $role") })
 
   rolesRepository.findById(3)
-    .runWith(Sink.foreach { role => system.log.info(s"findById: $role") })
+    .runWith(Sink.foreach { role => system.log.info(s"rolesRepository:findById: $role") })
 
   userRepository.findAll
-    .runWith(Sink.foreach { role => system.log.info(s"findAll: $role") })
-
+    .runWith(Sink.foreach { role => system.log.info(s"userRepository:findAll: $role") })
   /*
   rolesRepository.delete(Role(Some(3), "DBA_ROLE"))
     .runWith(Sink.foreach { count => system.log.info(s"delete: $count") })
