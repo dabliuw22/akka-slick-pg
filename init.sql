@@ -6,32 +6,19 @@ CREATE TABLE roles (
 CREATE TABLE users (
     id SERIAL PRIMARY KEY,
     name VARCHAR NOT NULL,
+    score DECIMAL(10, 2) NOT NULL,
     role_id INTEGER NULL,
     FOREIGN KEY (role_id) REFERENCES roles(id)
-);
-
-CREATE TABLE items (
-    id SERIAL PRIMARY KEY,
-    name VARCHAR NOT NULL
 );
 
 INSERT INTO roles(name) VALUES('USER_ROLE');
 INSERT INTO roles(name) VALUES('ADMIN_ROLE');
 
-INSERT INTO users(name, role_id) VALUES('username1', 1);
-INSERT INTO users(name, role_id) VALUES('username2', 1);
-INSERT INTO users(name, role_id) VALUES('username3', 1);
-INSERT INTO users(name, role_id) VALUES('username4', 1);
-INSERT INTO users(name, role_id) VALUES('username5', 1);
-INSERT INTO users(name, role_id) VALUES('username6', 1);
-INSERT INTO users(name, role_id) VALUES('username7', 1);
-INSERT INTO users(name, role_id) VALUES('username8', 2);
-
-INSERT INTO items(name) VALUES('items1');
-INSERT INTO items(name) VALUES('items2');
-INSERT INTO items(name) VALUES('items3');
-INSERT INTO items(name) VALUES('items4');
-INSERT INTO items(name) VALUES('items5');
-INSERT INTO items(name) VALUES('items6');
-INSERT INTO items(name) VALUES('items7');
-INSERT INTO items(name) VALUES('items8');
+INSERT INTO users(name, score, role_id) VALUES('username1', 10.5, 1);
+INSERT INTO users(name, score, role_id) VALUES('username2', 14.5, 1);
+INSERT INTO users(name, score, role_id) VALUES('username3', 20.0, 1);
+INSERT INTO users(name, score, role_id) VALUES('username4', 22.2, 1);
+INSERT INTO users(name, score, role_id) VALUES('username5', 10.5, 1);
+INSERT INTO users(name, score, role_id) VALUES('username6', 9.5, 1);
+INSERT INTO users(name, score, role_id) VALUES('username7', 8.5, 1);
+INSERT INTO users(name, score, role_id) VALUES('username8', 12.5, 2);
