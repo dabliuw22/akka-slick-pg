@@ -7,7 +7,9 @@ import akka.stream.alpakka.slick.scaladsl.Slick
 import akka.stream.scaladsl.{Sink, Source}
 import slick.basic.DatabaseConfig
 import slick.jdbc.JdbcProfile
+
 import scala.language.postfixOps
+import scala.util.Random
 
 object SlickAppTwo extends App {
   implicit val system = ActorSystem("slick-pg")
@@ -20,7 +22,7 @@ object SlickAppTwo extends App {
   val rolesRepository = RolesRepository(tables)
   val userRepository = UserRepository(tables)
 
-  Source.single(User(name = "username100"))
+  Source.single(User(name = s"username${Random.between(10, 100)}", score = Random.between(0, 100)))
     .flatMapConcat { user => rolesRepository.findByName("ADMIN_ROLE")
       .map { role => user.role = role ?; user }
       .flatMapConcat { userRepository.save(_) }
@@ -125,20 +127,20 @@ case class RolesRepository(tables: Tables)(implicit session: SlickSession) {
       .update(updateRole.tupled)))
 }
 
-case class User(id: Option[Int] = None, name: String, var role: Option[Role] = None) {
+case class User(id: Option[Int] = None, name: String, score: Double = 0.0, var role: Option[Role] = None) {
 
   def tupled = role match {
-    case Some(value) => (this.id, this.name, value.id)
-    case _ => (this.id, this.name, None)
+    case Some(value) => (this.id, this.name, this.score, value.id)
+    case _ => (this.id, this.name, this.score, None)
   }
 }
 
 object User {
 
-  def from(result: ((Option[Int], String, Option[Int]), Option[(Option[Int], String)])) =
+  def from(result: ((Option[Int], String, Double, Option[Int]), Option[(Option[Int], String)])) =
     result._2 match {
-      case Some(value) => User(id = result._1._1, name = result._1._2, role = Option(Role.from(value)))
-      case _ => User(id = result._1._1, name = result._1._2)
+      case Some(value) => User(result._1._1, result._1._2, result._1._3, role = Option(Role.from(value)))
+      case _ => User(id = result._1._1, name = result._1._2, score = result._1._3)
     }
 }
 
@@ -161,7 +163,7 @@ case class Tables(session: SlickSession) {
   val users = TableQuery[UserTable]
 
   type RoleType = (Option[Int], String)
-  type UserType = (Option[Int], String, Option[Int])
+  type UserType = (Option[Int], String, Double, Option[Int])
 
   class RoleTable(tag: Tag) extends Table[RoleType](tag, "roles") {
     def id = column[Int]("id", O.PrimaryKey, O.AutoInc)
@@ -172,8 +174,9 @@ case class Tables(session: SlickSession) {
   class UserTable(tag: Tag) extends Table[UserType](tag, "users") {
     def id = column[Int]("id", O.PrimaryKey, O.AutoInc)
     def name = column[String]("name")
+    def score = column[Double]("score")
     def roleId = column[Int]("role_id")
-    def * = (id.?, name, roleId.?)
+    def * = (id.?, name, score, roleId.?)
     def role = foreignKey("role_id",
       roleId, roles)(_.id, onDelete = ForeignKeyAction.Cascade, onUpdate = ForeignKeyAction.Restrict)
   }
